@@ -1,0 +1,24 @@
+{
+    "background": {
+        "scripts": [
+            "background.js"
+        ]
+    },
+    "description": "A Firefox extension to sort tabs into groups by url",
+    "homepage_url": "https://github.com/vlakreeh/tabby",
+    "manifest_version": 2,
+    "name": "Tabby",
+    "permissions": [
+        "tabs"
+    ],
+    "commands": {
+        "group-tabs": {
+            "suggested_key": {
+                "default": "Ctrl+Y",
+                "linux": "Ctrl+Y"
+            },
+            "description": "Groups browser tabs together."
+        }
+    },
+    "version": "0.1.0"
+}
