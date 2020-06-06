@@ -1,7 +1,51 @@
-// TODO: Find a good way to sort the tabs within a group.
+async function fetchTabUrls(tabs) {
+    const tabsAndUrls = []
+
+    for (const tab of tabs) {
+        const [url] = await browser.tabs.executeScript(tab.id, { code: "document.URL" });
+        tabsAndUrls.push({ tab, url: new URL(url) });
+    }
+
+    return tabsAndUrls;
+}
+
+function buildTree(entries) {
+    const result = [];
+    const level = { result };
+
+    entries.forEach(tabEntry => {
+        const path = tabEntry.url.pathname.substring(1);
+        path.split("/").reduce((reduceValue, name) => {
+            if (!reduceValue[name]) {
+                reduceValue[name] = { result: [] };
+                reduceValue.result.push({
+                    name,
+                    tab: tabEntry.tab,
+                    children: reduceValue[name].result
+                });
+            }
+
+            return reduceValue[name];
+        }, level);
+    });
+
+    return result;
+}
+
+function registerToList(tabs, node) {
+    if (node.children.length == 0) {
+        tabs.push(node.tab);
+        return;
+    }
+
+    for (const child of node.children) {
+        registerToList(tabs, child);
+    }
+}
+
 async function createTabGroups() {
     const tabs = await browser.tabs.query({ currentWindow: true });
-    return tabs.reduce((tabGroups, tab) => {
+    const tabGroups = tabs.reduce((tabGroups, tab) => {
         const host = new URL(tab.url).host;
 
         const group = tabGroups[host] || [];
@@ -10,6 +54,19 @@ async function createTabGroups() {
 
         return tabGroups;
     }, {});
+
+    for (const groupId of Object.keys(tabGroups)) {
+        const tabs = tabGroups[groupId];
+        const tabsAndUrls = await fetchTabUrls(tabs);
+
+        const sortedTabs = [];
+        const treeList = buildTree(tabsAndUrls);
+        treeList.forEach(tree => registerToList(sortedTabs, tree));
+
+        tabGroups[groupId] = sortedTabs;
+    }
+
+    return tabGroups;
 }
 
 // Register the listener for the group tabs command.
